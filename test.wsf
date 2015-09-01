@@ -1,0 +1,15 @@
+<job>
+<script language="VBScript" src="..\List\ArrayList\ArrayList.vbs" /><!-- レポジトリには含みません -->
+<script language="VBScript" src=".\src\ExprToken.vbs" />
+<script language="VBScript" src=".\src\ExprLexer.vbs" />
+<script language="VBScript" src=".\src\AstNode.vbs" />
+<script language="VBScript" src=".\src\ExprParser.vbs" />
+<script language="VBScript" src=".\src\TreeVisitor.vbs" />
+<script language="VBScript" src=".\src\SqlTable.vbs" />
+<script language="VBScript">
+
+dim table
+set table = new SqlTable
+
+</script>
+</job>
