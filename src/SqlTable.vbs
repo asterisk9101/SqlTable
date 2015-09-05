@@ -810,7 +810,6 @@ class SqlTable
         dim table, list, item, pos
         set table = new ArrayList
         set list = new ArrayList
-        i = 0
         for each item in node.getChildren().item(0).getChildren().toArray()
             pos = item.getPos()
             call list.push(mid(cols, pos(0), pos(1) - pos(0)))
