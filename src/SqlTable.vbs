@@ -1236,7 +1236,7 @@ class SqlTable
     end function
     
     public function getColumn(byval col)
-        ''' 指定された列を配列にして返す。テーブルの行がなければ empty を返す。
+        ''' 指定された列を配列にして返す。テーブルの行がなければ Array() を返す。
         ''' 第一引数 col として、取得するヘッダ名 (String) を受け取る。
         ''' 戻り値として、指定された列の配列 (Array) を返す。
         
