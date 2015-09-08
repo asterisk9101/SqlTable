@@ -262,8 +262,9 @@ class ExprParser
             set node = paren_expr()
         case "LBRA"
             set node = ary()
-        case "NOT"
+        case "ADD", "SUB", "NOT"
             set node = (new AstNode).init(token)
+            set token = lex.nextToken()
             call node.push(val())
         case "NUMBER", "STRING", "REGEX", "DATE", "TRUE", "FALSE"
             set node = (new AstNode).init(token)

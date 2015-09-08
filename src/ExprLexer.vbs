@@ -81,18 +81,12 @@ class ExprLexer
         case "%" next_(): set token = (new ExprToken).init("SUR", "%", pos, at)
         case "&" next_(): set token = (new ExprToken).init("AND", "&", pos, at)
         case "|" next_(): set token = (new ExprToken).init("OR", "|", pos, at)
-        case "*" next_(): set token = (new ExprToken).init("MUL", "*", pos, at)
         case ";" next_(): set token = (new ExprToken).init("TERM", ";", pos, at)
-        case "#" set token = yyyymmdd()
         case "~" next_(): set token = (new ExprToken).init("MATCH", "~", pos, at)
-        case "="
-            next_()
-            if ch = "=" then
-                next_()
-                set token = (new ExprToken).init("EQL", "==", pos, at)
-            else
-                set token = (new ExprToken).init("ASSIGN", "=", pos, at)
-            end if
+        case "#" set token = yyyymmdd()
+        case "+" next_(): set token = (new ExprToken).init("ADD", "+", pos, at)
+        case "-" next_(): set token = (new ExprToken).init("SUB", "-", pos, at)
+        case "*" next_(): set token = (new ExprToken).init("MUL", "*", pos, at)
         case "/"
             if token is nothing then
                 ' 式の先頭に / が現れた場合は除算記号でないことが確定するので
@@ -107,6 +101,14 @@ class ExprLexer
                 ' ここでは構文解析をしないので正規表現リテラルとしてパースする。
                 set token = regex()
             end if
+        case "="
+            next_()
+            if ch = "=" then
+                next_()
+                set token = (new ExprToken).init("EQL", "==", pos, at)
+            else
+                set token = (new ExprToken).init("ASSIGN", "=", pos, at)
+            end if
         case "!"
             next_()
             if ch = "=" then
@@ -117,24 +119,6 @@ class ExprLexer
                 set token = (new ExprToken).init("UNMATCH", "!~", pos, at)
             else
                 set token = (new ExprToken).init("NOT", "!", pos, at)
-            end if
-        case "+"
-            if token is nothing or token.getLex() = "(" or token.getLex() = "[" then
-                ' 式の先頭にある + は数字の一部
-                next_()
-                set token = number("+")
-            else
-                next_()
-                set token = (new ExprToken).init("ADD", "+", pos, at)
-            end if
-        case "-"
-            if token is nothing or token.getLex() = "(" or token.getLex() = "[" then
-                ' 式の先頭にある - は数字の一部
-                next_()
-                set token = number("-")
-            else
-                next_()
-                set token = (new ExprToken).init("SUB", "-", pos, at)
             end if
         case ">"
             if next_() = "=" then

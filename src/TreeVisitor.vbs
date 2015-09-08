@@ -168,6 +168,12 @@ class TreeVisitor
     end function
     
     private function add_(byval args)
+        ' + が単項演算子として使用されていた場合はそのままの値を返す。
+        if args.length() = 1 then
+            add_ = args.item(0)
+            exit function
+        end if
+        
         dim result, arg
         for each arg in args.toArray()
             result = result + arg
@@ -176,6 +182,12 @@ class TreeVisitor
     end function
     
     private function sub_(byval args)
+        ' - が単項演算子として使用されている場合は、符号を反転して返す。
+        if args.length() = 1 then
+            sub_ = -args.item(0)
+            exit function
+        end if
+        
         dim result, arg
         result = args.item(0)
         args.removeAt(0)
