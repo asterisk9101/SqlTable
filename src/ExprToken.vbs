@@ -44,7 +44,7 @@ class ExprToken
     public function setTyp(byval t)
         ''' トークンの型を設定する。
         ''' 戻り値を返さない。
-        setTyp = t
+        typ = t
     end function
     
     public function toString()

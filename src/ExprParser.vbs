@@ -234,18 +234,18 @@ class ExprParser
         set expr_list = node
     end function
     
-    private function word()
+    private function WORD()
         dim node
         set node = (new AstNode).init(token)
         
         ' word(...) なら関数として処理する
         set token = lex.nextToken()
         if check("LPAR") then set node = func(node)
-        
         set word = node
     end function
     
     private function func(byval node)
+        call node.getToken().setTyp("FUNC") ' トークンの型を書き換え
         call match("LPAR")
         set func = node ' 戻り値
         ' 引数なしの関数
