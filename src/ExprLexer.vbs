@@ -6,26 +6,14 @@ class ExprLexer
     ''' プライベート変数 expr は、数式となる文字列 (String) を格納する。
     ''' プライベート変数 at は、expr の中で何文字目を解析しているかという情報 (Number) を格納する。
     ''' プライベート変数 ch は、epxr の中で at 文字目に存在する一文字 (String) を格納する。
-    ''' プライベート変数 x は、行頭から何文字目を解析しているかという情報 (Number) を格納する。
-    ''' プライベート変数 y は、何行目を解析しているかという情報 (Number) を格納する。
     ''' プライベート変数 token は、直前に解析したトークン (ExprToken) を格納する。
     private expr
     private at
     private ch
-    private x
-    private y
     private token
     
     public function getAt()
         getAt = at
-    end function
-    
-    public function getX()
-        getX = x
-    end function
-    
-    public function getY()
-        getY = y
     end function
     
     public function currentToken()
@@ -47,8 +35,6 @@ class ExprLexer
         ''' ExprLexer を初期化する。
         ''' 第一変数 str として、解析する式 (String) を受け取る。
         ''' 戻り値として、自分自身への参照 (ExprLexer) を返す。
-        x = 1
-        y = 1
         at = 1
         expr = str
         ch = mid(expr, 1, 1)
@@ -57,7 +43,7 @@ class ExprLexer
     end function
     
     private function error_(byval m)
-        call err.raise(1000, TypeName(me), m & " (" & x & ", " & y & ")")
+        call err.raise(1000, TypeName(me), m)
     end function
     
     private function next_()
@@ -65,20 +51,6 @@ class ExprLexer
         ''' 戻り値として、読み進めた先の文字を返す。
         at = at + 1
         ch = mid(expr, at, 1)
-        
-        ' トークンの出現位置 x, y を記録する。デバッグ用。
-        select case ch
-        case vbCr
-            x = 0
-            if mid(expr, at - 1, 1) <> vbLf then
-                y = y + 1
-            end if
-        case vbLf
-            x = 0
-            y = y + 1
-        case else
-            x = x + 1
-        end select
         next_ = ch
     end function
     
@@ -225,11 +197,11 @@ class ExprLexer
         ret = ""
         pos = at
         do while next_() <> "#"
-            if ch = "" then error_("date format end is not found")
+            if ch = "" then error_("date format end is not found: " & pos)
             ret = ret & ch
         loop
         call next_() ' 終わりの # をスキップする
-        if not isDate(ret) then error_("format is not date")
+        if not isDate(ret) then error_("format is not date: " & pos)
         set yyyymmdd = (new ExprToken).init("DATE", ret, pos, at)
     end function
     
@@ -262,7 +234,7 @@ class ExprLexer
         do while next_() <> q
             if ch = "\" then
                 select case next_()
-                case ""  error_("string end not found.")
+                case ""  error_("string end not found: " & pos)
                 case "t" s = s & chr(9)   ' TAB
                 case "n" s = s & chr(10)  ' LF
                 case "r" s = s & chr(13)  ' CR
@@ -271,7 +243,7 @@ class ExprLexer
                 case else s = s & " "
                 end select
             else
-                if ch = "" then error_("string end not found.")
+                if ch = "" then error_("string end not found: " & pos)
                 s = s & ch
             end if
         loop
@@ -296,11 +268,11 @@ class ExprLexer
                 case "/" re = re & "/"
                 end select
             else
-                if ch = "" then error_("regex end not found.")
+                if ch = "" then error_("regex end not found: " & pos)
                 re = re & ch
             end if
         loop
-        if re = "/" then error_("invalid regex")
+        if re = "/" then error_("invalid regex: " & pos)
         re = re & "/"
         do
             select case next_()
