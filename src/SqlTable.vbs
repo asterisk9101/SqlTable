@@ -296,13 +296,8 @@ class SqlTable
     end function
     
     public function delHeader()
-        delHeader = array()
-        if body.length() = 0 then exit function
-        
-        dim old
-        set old = body.shift()
-        call body.unshift(getPseudoHeader(old.length()))
-        delHeader = old.toArray()
+        delHeader = head.toArray()
+        set haed = getPseudoHeader(head.length())
     end function
     
     ' ヘッダを生成して返す
@@ -318,21 +313,15 @@ class SqlTable
     
     ' テーブルのレコード数を返す
     public function count()
-        count = 0
-        if body.length() = 0 then exit function
-        
-        count = body.length() - 1 ' ヘッダはカウントしない
+        count = body.length()
     end function
     
     public function height()
-        height = count
+        height = count()
     end function
     
     ' テーブルのフィールド数を返す
     public function width()
-        width = 0
-        if body.length() = 0 then exit function
-        
         width = head.length()
     end function
     
