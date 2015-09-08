@@ -217,12 +217,11 @@ class SqlTable
         
         dim header
         set header = toList(ary)
-        set header = rightPadding(header, body.item(0).length())
-        set header = header.slice(0, body.item(0).length())
+        set header = rightPadding(header, head.length())
+        set header = header.slice(0, head.length())
         set header = fixHeader(header)
         
-        call body.shift()
-        call body.unshift(header)
+        set head = header
         
         set setHeader = me
     end function
