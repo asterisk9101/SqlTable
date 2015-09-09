@@ -146,7 +146,7 @@ class SqlTable
     
     public function insert(byval ary)
         set insert = me
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
         
         dim list
         set list = toList(ary)
@@ -161,13 +161,17 @@ class SqlTable
     public function insertAll(byval table)
         set insertAll = new SqlTable
         if TypeName(table) <> "SqlTable" then error_("TypeError: argument type is " & TypeName(table))
-        if table.count = 0 then set insertAll = (new SqlTable).from(body, true)
+        if table.count = 0 then
+            call body.unshift(head)
+            set insertAll = (new SqlTable).from(body, true)
+            call body.pop()
+        end if
         
         dim listTable
         set listTable = toListTable(table.toArrayTable(true))
         
         dim header1, header2, newheader
-        set header1 = body.shift()
+        set header1 = head
         set header2 = listTable.shift()
         ' header1 と header2 を連結して重複を削除する
         set newheader = header1.clone().concat(header2.clone())
@@ -197,7 +201,6 @@ class SqlTable
             next
         next
         
-        call body.unshift(header1)
         call newbody.unshift(newheader)
         call insertAll.from(newbody, true)
     end function
@@ -205,7 +208,7 @@ class SqlTable
     ' 現在のヘッダを取得する
     public function describe()
         describe = array()
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
         
         describe = head.toArray()
     end function
@@ -296,6 +299,9 @@ class SqlTable
     end function
     
     public function delHeader()
+        delHeader = empty
+        if isEmpty(head) then exit function
+        
         delHeader = head.toArray()
         set haed = getPseudoHeader(head.length())
     end function
@@ -344,12 +350,10 @@ class SqlTable
         ''' 第二引数 limit として、取り出すレコードの最大数 (Number) を受け取る。
         ''' 戻り値として、指定範囲のレコードを含むテーブル (SqlTable) を返す。
         set range = new SqlTable
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
         
-        dim listTable
+        dim listTable, i, length
         set listTable = new ArrayList
-        
-        dim i, length
         i = offset
         length = body.length()
         do while i < length and i < limit + offset
@@ -374,30 +378,27 @@ class SqlTable
         ''' 第一引数 expr として、抽出条件 (String) を受け取る。
         ''' 戻り値として、抽出されたレコードを含むテーブル (SqlTable) を返す。
         set takeWhile = new SqlTable
-        if body.length() = 0 then exit function
-        
-        dim tree
-        call lexer.init(expr)
-        call parser.init(lexer)
-        set tree = parser.expr()
+        if isEmpty(head) then exit function
         
         dim listTable
         set listTable = new ArrayList
         
-        dim i, length
-        i = 0
-        length = body.length()
-        do while i < length
-            call assign(head, body.item(i)) ' visitor に row をセットする
-            if visitor.evalate(tree) then
-                call listTable.push(body.item(i))
-            else
-                exit do
-            end if
-            i = i + 1
-        loop
+        if body.length() = 0 then
+            call listTable.push(head.clone())
+            call takeWhile.from(listTable, true)
+            exit function
+        end if
         
-        call body.unshift(head)
+        dim tree, row
+        call lexer.init(expr)
+        call parser.init(lexer)
+        set tree = parser.expr()
+        
+        for each row in body.toArray()
+            call assign(head, row)
+            if visitor.evalate(tree) then call listTable.push(row)
+        next
+        
         call listTable.unshift(head.clone())
         call takeWhile.from(listTable, true)
     end function
@@ -414,15 +415,20 @@ class SqlTable
         ''' 第一引数 expr として、スキップする条件 (String) を受け取る。
         ''' 戻り値として、残りのレコードを含むテーブル (SqlTable) を返す。
         set skipWhile = new SqlTable
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
+        
+        dim listTable
+        set listTable = new ArrayList
+        if body.length() = 0 then
+            call listTable.push(head.clone())
+            call skipWhile.from(listTable, true)
+            exit function
+        end if
         
         dim tree
         call lexer.init(expr)
         call parser.init(lexer)
         set tree = parser.expr()
-        
-        dim listTable
-        set listTable = new ArrayList
         
         dim i, length
         i = 0
@@ -436,7 +442,6 @@ class SqlTable
         loop
         
         call listTable.unshift(head.clone())
-        
         call skipWhile.from(listTable, true)
     end function
     
@@ -445,10 +450,15 @@ class SqlTable
         ''' 戻り値として、重複行を排除した新しいテーブル (SqlTable) を返す。
         
         set distinct = new SqlTable
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
         
         dim after
         set after = new ArrayList
+        if body.length() = 0 then
+            call after.push(head.clone())
+            call distinct.from(after, true)
+            exit function
+        end if
         
         dim rec1, rec2, agree
         for each rec1 in body.toArray()
@@ -565,18 +575,22 @@ class SqlTable
     ' false となったレコードは、extract を実行したインスタンスに残る。
     public function extract(byval cond)
         set extract = new SqlTable
-        if body.length() = 0 then exit function
-        
-        dim tree
-        call lexer.init(cond)
-        call parser.init(lexer)
-        set tree = parser.expr
+        if isEmpty(head) then exit function
         
         dim trueTable, falseTable
         set trueTable = new ArrayList
         set falseTable = new ArrayList
+        if body.length() = 0 then
+            call trueTable.push(head.clone())
+            call extract.from(trueTable, true)
+            exit function
+        end if
         
-        dim row
+        dim tree, row
+        call lexer.init(cond)
+        call parser.init(lexer)
+        set tree = parser.expr()
+        
         for each row in body.toArray()
             call assign(head, row)
             if visitor.evalate(tree) then
@@ -787,8 +801,11 @@ class SqlTable
     
     public function map(byval cols)
         ''' 列を生成する。
-        ''' 第一引数 cols として、列を表す式の配列 (array) を受け取る。
+        ''' 第一引数 cols として、列を表す式の配列 (Array) を受け取る。
         ''' 戻り値として、新しいテーブル (SqlTable) を返す。
+        set map = new SqlTable
+        if isEmpty(head) then exit function
+        
         cols = "[" & cols & "]"
         dim node
         call lexer.init(cols)
@@ -815,28 +832,31 @@ class SqlTable
             call table.push(list)
         next
         
-        set map = (new SqlTable).from(table, true)
+        set map = map.from(table, true)
     end function
     
     public function filter(byval cond)
         set filter = new SqlTable
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
+        
+        dim table, row
+        set table = new ArrayList
+        call table.push(head.clone())
+        
+        if body.length() = 0 then
+            set filter.from(table, true)
+            exit function
+        end if
         
         dim tree
         call lexer.init(cond)
         call parser.init(lexer)
         set tree = parser.expr()
         
-        dim table, row
-        set table = new ArrayList
-        
         for each row in body.toArray()
             call assign(head, row)
-            if visitor.evalate(tree) then
-                call table.push(row)
-            end if
+            if visitor.evalate(tree) then call table.push(row)
         next
-        call table.unshift(head.clone())
         call filter.from(table, true)
     end function
     
@@ -1045,13 +1065,14 @@ class SqlTable
         ''' 戻り値として、テーブル上のリスト (ArrayList) を返す。
         if not isArray(ary2d) then call error_("not 2d array: " & TypeName(ary2d))
         
-        dim list, i, j
-        set list = new ArrayList
+        dim table, row, i, j
+        set table = new ArrayList
         for i = lbound(ary2d) to ubound(ary2d)
-            call list.push(new ArrayList)
+            set row = new ArrayList
             for j = lbound(ary2d, 2) to ubound(ary2d, 2)
-                call list.peek.push(ary2d(i, j))
+                call row.push(ary2d(i, j))
             next
+            call table.push(row)
         next
         set toListTable = list
     end function
@@ -1066,6 +1087,7 @@ class SqlTable
     
     public function toArrayTableWithHeader()
         toArrayTableWithHeader = Array()
+        if isEmpty(head) then exit function
         if body.length() = 0 then
             toArrayTableWithHeader = oneRowArrayTable(head)
             exit function
@@ -1077,6 +1099,7 @@ class SqlTable
     
     public function toArrayTableWithoutHeader()
         toArrayTableWithoutHeader = Array()
+        if isEmpty(head) then exit function
         if body.length() = 0 then exit function
         if body.length() = 1 then
             toArrayTableWithoutHeader = oneRowArrayTable(body.item(1))
@@ -1101,32 +1124,24 @@ class SqlTable
     end function
     
     private function convertToArrayTable(byval list)
-        dim row, col, ary(), i
+        ''' リストのリストを二次元配列に格納する
+        ''' 第一引数 list として、リストのリスト (ArrayList) を受け取る。
+        ''' 戻り値として、二次元配列 (Array(,)) を返す。
+        dim row, col, ary(), i, j
         row = list.length() - 1
         col = list.item(0).length() - 1
         redim ary(row, col)
         i = 0
         do while i <= row
-            call pushTable(ary, i, list.item(i).toArray())
+            j = 0
+            do while j <= col
+                if list.item(i).length() < j then exit do
+                ary(i, j) = list.item(i).item(j)
+                j = j + 1
+            loop
             i = i + 1
         loop
         convertToArrayTable = ary
-    end function
-    
-    private function pushTable(byref aryTable, byval index, byval ary)
-        ''' 二次元配列に一次元配列を追加する。
-        ''' 二次元配列を参照として受け取り、破壊的に作用する。
-        ''' 第一引数 aryTable として、二次元配列 (Array) を受け取る。
-        ''' 第二引数 index として、一次元配列を格納する行番号 (Number) を受け取る。
-        ''' 第三引数 ary として、一次元配列 (Array) を受け取る。
-        ''' 戻り値は返さない。
-        dim i, max
-        max = ubound(aryTable, 2) + 1
-        i = 0
-        do while i < max
-            aryTable(index, i) = ary(i)
-            i = i + 1
-        loop
     end function
     
     public function toString(byval withHeader)
@@ -1144,13 +1159,14 @@ class SqlTable
     
     public function toStringWithHeader()
         toStringWithHeader = ""
+        if isEmpty(head) then exit function
         if body.length() = 0 then exit function
         
         dim sb
         set sb = createObject("System.Text.StringBuilder")
         
         ' ヘッダの設定
-        call sb.append_3(join(escape.toArray(), vbTab) & vbCrLf)
+        call sb.append_3(join(head.toArray(), vbTab) & vbCrLf)
         dim col
         for each col in head.toArray()
             call sb.append_3(string(len(col), "-"))
@@ -1170,6 +1186,7 @@ class SqlTable
     
     public function toStringWithoutHeader()
         toStringWithoutHeader = ""
+        if isEmpty(head) then exit function
         if body.length() = 0 then exit function
         
         dim sb
@@ -1191,9 +1208,9 @@ class SqlTable
         ''' 第二引数 c として、列番号 (Number) を受け取る。
         ''' 戻り値として、指定されたアドレスの値 (Variant) を返す。
         getValue = empty
-        if body.length() = 0 then exit function
+        if isEmpty(head) then exit function
+        if c < 0 or head.length() - 1 < c then exit function
         if r < 0 or body.length() - 1 < r then exit function
-        if c < 0 or body.item(0).length() - 1 < c then exit function
         
         call body.item(r).setItem(c, v)
     end function
@@ -1204,9 +1221,9 @@ class SqlTable
         ''' 第二引数 c として、列番号 (Number) を受け取る。
         ''' 戻り値として、指定されたアドレスの値 (Variant) を返す。
         getValue = empty
-        if body.length() = 0 then exit function
+        if isEmpty(head) = 0 then exit function
+        if c < 0 or head.length() - 1 < c then exit function
         if r < 0 or body.length() - 1 < r then exit function
-        if c < 0 or body.item(0).length() - 1 < c then exit function
         
         getValue = body.item(r).item(c)
     end function
@@ -1217,6 +1234,7 @@ class SqlTable
         ''' 第一引数 r として、取得する行番号 (Number) を受け取る。
         ''' 戻り値として、指定された行の配列 (Array) を返す。
         getRow = array()
+        if isEmpty(head) then exit function
         if body.length() = 0 then exit function
         if index < 0 or body.length() - 1 < r then exit function
         
@@ -1229,6 +1247,7 @@ class SqlTable
         ''' 戻り値として、指定された列の配列 (Array) を返す。
         
         getColumn = array()
+        if isEmpty(head) then exit function
         if body.length() = 0 then exit function
         
         dim ary(), index
@@ -1236,9 +1255,10 @@ class SqlTable
         index = indexof(head, col)
         if index = -1 then error_("header not found: " & col)
         
-        dim i
+        dim i, len
         i = 0
-        do while i < body.length()
+        len = body.length()
+        do while i < len
             ary(i) = body.item(i).item(index)
             i = i + 1
         loop
@@ -1246,16 +1266,30 @@ class SqlTable
     end function
     
     public function addColumn(byval name, byval defaultValue)
-        dim i
-        call head.push(name)
+        ''' テーブルにフィールドを追加する
+        ''' 第一引数 name として、追加するフィールドの名前 (String) を受け取る。
+        ''' 第二引数 defaultValue として、追加したフィールドの初期値 (Variant) を受け取る。
+        ''' 戻り値は返さない。
+        
+        call head.push(name) ' ToDo 名前のチェック
+        
+        dim i, len
         i = 0
-        do while i < body.length()
+        len = body.length()
+        do while i < len
             body.item(i).push(defaultValue)
             i = i + 1
         loop
     end function
     
     public function modColumn(byval before, byval after)
+        ''' フィールド名を変更する。
+        ''' 第一引数 before として、変更前の名前 (String) を受け取る。
+        ''' 第二引数 after として、変更後の名前 (String) を受け取る。
+        ''' 戻り値は返さない。
+        
+        if isEmpty(head) then call err.raise(12345, TypeName(me), "header is empty")
+        
         dim index
         index = indexof(head, before)
         if index = -1 then call err.raise(12345, TypeName(me), "header not found: " & before)
