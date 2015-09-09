@@ -67,7 +67,6 @@ class AstNode
         dim pos, item, childpos
         pos = token.getPos()
         
-        i = 0
         for each item in children.toArray()
             childpos = item.getPos()
             if childpos(0) < pos(0) then pos(0) = childpos(0)
