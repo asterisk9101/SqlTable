@@ -17,7 +17,6 @@ class SqlTable
     ''' ƒNƒ‰ƒX•Ï” visitor ‚ÍA–K–âŠí (TreeVisitor) ‚ğŠi”[‚·‚éB
     
     private sub Class_Initialize
-        name = ""
         set head = new ArrayList
         set body = new ArrayList
         set lexer = new ExprLexer
