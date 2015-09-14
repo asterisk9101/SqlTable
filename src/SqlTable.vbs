@@ -143,12 +143,27 @@ class SqlTable
         set update = me
     end function
     
+    public function concat(byval table)
+        dim listTable
+        set listTable = toListTable(table.toArrayTable(false))
+        
+        dim iter, width
+        width = head.length()
+        for each iter in listTable.toArray()
+            set iter = rightPadding(iter, width)
+            set iter = iter.slice(0, width)
+            call body.push(iter)
+        next
+        
+        set concat = me
+    end function
+    
     public function insert(byval ary)
         set insert = me
         if isEmpty(head) then exit function
         
         dim list
-        set list = toList(ary)
+        if isArray(ary) then set list = toList(ary)
         set list = rightPadding(list, head.length())
         set list = list.slice(0, head.length())
         
