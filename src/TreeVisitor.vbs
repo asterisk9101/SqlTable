@@ -8,23 +8,24 @@ class TreeVisitor
     ''' プライベート変数 dic は、SQL 変数を格納する。
     
     private sub Class_Initialize
-        dicInit()
+        call init()
     end sub
     
-    private function dicInit()
+    public function init()
         ''' 組み込み変数を定義する。
         set dic = createObject("Scripting.Dictionary")
         call dic.add("true", true)
         call dic.add("false", false)
         call dic.add("null", null)
         call dic.add("empty", empty)
+        set init = me
     end function
     
     public function initAssign(byval ary)
         ''' 配列として与えられた値を $n の変数に代入する
         ''' 第一引数 ary として、変数に格納する値を含む配列 (array) を受け取る。
         ''' 戻り値として、自分自身への参照 (TreeVisitor) を返す。
-        dicInit()
+        call init()
         dim e, i
         i = 1
         for each e in ary
@@ -79,10 +80,12 @@ class TreeVisitor
         case "COMMA"    result = comma(args)
         case "NUMBER"   result = cdbl(t.getLex())
         case "STRING"   result = t.getLex()
-        case "EXPR"     result = args.item(0)
+        case "EXPR"     call bind(result, args.item(0))
         case "ARRAY"    result = args.toArray()
+        case "OBJECT"   set result = obj(args)
+        case "PAIR"     result = pair(args)
         case "DATE"     result = cdate(replace(t.getLex(), "#", ""))
-        case "REGEX" set result = parse_regex(t.getLex())
+        case "REGEX"    set result = parse_regex(t.getLex())
         case "WORD"
             if dic.exists(t.getLex) then
                 result = dic(t.getLex)
@@ -100,6 +103,27 @@ class TreeVisitor
         else
             evalate = result
         end if
+    end function
+    
+    private function bind(byref a, byval b)
+        if isObject(b) then
+            set a = b
+        else
+            a = b
+        end if
+    end function
+    
+    private function obj(byval args)
+        set obj = createObject("Scripting.Dictionary")
+        dim item
+        for each item in args.toArray()
+            call obj.add(item(0), item(1))
+        next
+        set obj = obj
+    end function
+    
+    private function pair(byval args)
+        pair = array(args.item(0), args.item(1))
     end function
     
     private function func(byval token, byval args)

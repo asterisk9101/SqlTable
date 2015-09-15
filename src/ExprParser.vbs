@@ -208,6 +208,31 @@ class ExprParser
         set expr = root
     end function
     
+    private function obj()
+        dim node
+        set node = genVirtualNode("OBJECT")
+        set obj = node
+        
+        call match("LBRACE")
+        if check("RBRACE") then exit function
+        call node.push(pair())
+        do while check("COMMA")
+            call node.push(pair())
+            set token = lex.nextToken()
+        loop
+        call match("RBRACE")
+        set obj = node
+    end function
+    
+    private function pair()
+        dim node
+        set node = genVirtualNode("PAIR")
+        call node.push(val())
+        call match("COLON")
+        call node.push(val())
+        set pair = node
+    end function
+    
     private function ary()
         dim node
         set node = genVirtualNode("ARRAY")
@@ -234,7 +259,7 @@ class ExprParser
         set expr_list = node
     end function
     
-    private function WORD()
+    private function word()
         dim node
         set node = (new AstNode).init(token)
         
@@ -262,6 +287,8 @@ class ExprParser
             set node = paren_expr()
         case "LBRA"
             set node = ary()
+        case "LBRACE"
+            set node = obj()
         case "ADD", "SUB", "NOT"
             set node = (new AstNode).init(token)
             set token = lex.nextToken()
