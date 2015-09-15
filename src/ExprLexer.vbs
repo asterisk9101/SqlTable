@@ -81,6 +81,7 @@ class ExprLexer
         case "%" next_(): set token = (new ExprToken).init("SUR", "%", pos, at)
         case "&" next_(): set token = (new ExprToken).init("AND", "&", pos, at)
         case "|" next_(): set token = (new ExprToken).init("OR", "|", pos, at)
+        case ":" next_(): set token = (new ExprToken).init("COLON", ":", pos, at)
         case ";" next_(): set token = (new ExprToken).init("TERM", ";", pos, at)
         case "~" next_(): set token = (new ExprToken).init("MATCH", "~", pos, at)
         case "#" set token = yyyymmdd()
@@ -196,7 +197,10 @@ class ExprLexer
         pos = at
         do
             select case next_()
-            case "", "+", "-", "/", "*", "%", "!", """", "&", "(", ")", "[", "]", "=", "|", ">", "<", ","
+            case "", "+", "-", "/", "*", "%", _
+                 "!", "=", ">", "<", "|", "&", "~", _
+                 """", "'", ",", ".",":", ";", _
+                 "(", ")", "[", "]", "{", "}", "#"
                 exit do
             case else
                 if 0 <= asc(ch) and asc(ch) <= 32 then
