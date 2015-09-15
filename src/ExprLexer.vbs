@@ -172,7 +172,7 @@ class ExprLexer
                 call next_()
             loop
         end if
-        set number = (new ExprToken).init("NUMBER", cdbl(ret), pos, at)
+        set number = (new ExprToken).init("NUMBER", ret, pos, at)
     end function
     
     private function yyyymmdd()
@@ -209,7 +209,14 @@ class ExprLexer
             end select
             w = w & ch
         loop
-        set word = (new ExprToken).init("WORD", w, pos, at)
+        select case lcase(w)
+        case "true"     set word = (new ExprToken).init("BOOLEAN", w, pos, at)
+        case "false"    set word = (new ExprToken).init("BOOLEAN", w, pos, at)
+        case "empty"    set word = (new ExprToken).init("EMPTY", w, pos, at)
+        case "null"     set word = (new ExprToken).init("NULL", w, pos, at)
+        case "nothing"  set word = (new ExprToken).init("NOTHING", w, pos, at)
+        case else       set word = (new ExprToken).init("WORD", w, pos, at)
+        end select
     end function
     
     private function str_(byval q)
