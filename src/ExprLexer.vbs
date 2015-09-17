@@ -78,7 +78,7 @@ class ExprLexer
         case "{" next_(): set token = (new ExprToken).init("LBRACE", "{", pos, at)
         case "}" next_(): set token = (new ExprToken).init("RBRACE", "}", pos, at)
         case "," next_(): set token = (new ExprToken).init("COMMA", ",", pos, at)
-        case "%" next_(): set token = (new ExprToken).init("SUR", "%", pos, at)
+        case "%" next_(): set token = (new ExprToken).init("MOD", "%", pos, at)
         case "&" next_(): set token = (new ExprToken).init("AND", "&", pos, at)
         case "|" next_(): set token = (new ExprToken).init("OR", "|", pos, at)
         case ":" next_(): set token = (new ExprToken).init("COLON", ":", pos, at)
