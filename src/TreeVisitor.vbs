@@ -59,8 +59,9 @@ class TreeVisitor
         for each child in tree.getChildren.toArray()
             call args.push(evalate(child))
         next
+        
         set t = tree.getToken()
-        select case t.getTyp
+        select case t.getTyp()
         case "ADD"  result = add_(args)
         case "SUB"  result = sub_(args)
         case "MUL"  result = mul(args)
@@ -87,8 +88,8 @@ class TreeVisitor
         case "DATE"     result = cdate(replace(t.getLex(), "#", ""))
         case "REGEX"    set result = parse_regex(t.getLex())
         case "WORD"
-            if dic.exists(t.getLex) then
-                result = dic(t.getLex)
+            if dic.exists(t.getLex()) then
+                result = dic(t.getLex())
             else
                 result = Empty
             end if
@@ -98,11 +99,7 @@ class TreeVisitor
             call Err.raise(1000, TypeName(me), "illigal token")
         end select
         
-        if isObject(result) then
-            set evalate = result
-        else
-            evalate = result
-        end if
+        call bind(evalate, result)
     end function
     
     private function bind(byref a, byval b)

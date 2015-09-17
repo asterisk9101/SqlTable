@@ -858,7 +858,7 @@ class SqlTable
         call table.push(head.clone())
         
         if body.length() = 0 then
-            set filter.from(table, true)
+            call filter.from(table, true)
             exit function
         end if
         
@@ -874,58 +874,70 @@ class SqlTable
         call filter.from(table, true)
     end function
     
-    public function orderby(byval cond)
-        ''' ソートしたテーブルを新たに生成して返す。
-        ''' 第一引数 cond として、ソート条件 (String) を受け取る。
-        ''' 戻り値として、ソート済みのテーブル (SqlTable) を返す。
-        
+    public function orderby(byval querysString)
         set orderby = new SqlTable
-        if body.length() = 0 then exit function
+        querysString = "[" & querysString & "]"
         
-        dim table, tables, lex, opt
+        dim querys, key
+        call lexer.init(querysString)
+        call parser.init(lexer)
+        call visitor.init()
+        for each key in head.toArray()
+            call visitor.assign(key, key)
+        next
+        querys = visitor.evalate(parser.expr())
         
-        set table = body.clone()
-        set tables = new ArrayList
-        call tables.push(table)
+        dim listTable
+        set listTable = body.clone()
+        call listTable.unshift(head.clone())
+        set listTable = sort(listTable, (new ArrayList).init(querys))
         
-        set lex = (new ExprLexer).init(cond)
-        opt = getNextOption(lex)
-        
-        do while not isEmpty(opt)
-            opt(0) = indexof(head, opt(0))
-            if opt(0) = -1 then call error_("sort")
-            
-            set table = sort(tables, opt)
-            set tables = splitTable(table.clone(), opt(0))
-            opt = getNextOption(lex)
-        loop
-        
-        call orderby.from(table, true)
+        call orderby.from(listTable, true)
     end function
     
-    private function sort(byval tables, byval opt)
-        ''' 複数のテーブルをソートし、結合したテーブルを返す。
-        ''' 第一引数 tables として、テーブル (ArrayList<ArrayList<String>>) を格納したリスト(ArrayList)を受け取る。
-        ''' 第二引数 opt として、ソート条件 (Array) を受け取る。
-        ''' opt(0) にはソートのキーとなる列番号(Number)、opt(1) にはソート方法(String)が格納される。
-        ''' ソート方法としては昇順を表す asc と、降順を表す desc 、更に floatup がある。
-        ''' 戻り値として、ソート済みのテーブルを連結したテーブル(ArrayList)を返す。
+    private function sort(byval listTable, byval querys)
         
-        dim before, after
-        set after = new ArrayList
-        for each before in tables.toArray()
-            select case lcase(opt(1))
-            case "asc"
-                call after.concat(mergesort(before, opt(0)))
-            case "desc"
-                call after.concat(rev_mergesort(before, opt(0)))
-            case "floatup"
-                call after.concat(floatupsort(before, opt(0)))
-            case else
-                call after.concat(mergesort(before, opt(0)))
-            end select
+        dim header
+        set header = listTable.shift()
+        
+        dim query, key, index
+        set query = querys.shift()
+        key = query.keys()(0)
+        index = indexof(header, key)
+        if index = -1 then call error_("header not found")
+        
+        dim table
+        select case lcase(query.item(key))
+        case "asc"      set table = mergesort(listTable, index)
+        case "desc"     set table = rev_mergesort(listTable, index)
+        case "floatup"  set table = floatupsort(listTable, index)
+        case else       set table = mergesort(listTable, index)
+        end select
+        
+        call table.unshift(header)
+        
+        dim tables
+        set tables = new ArrayList
+        for each table in splitTable(table, index).toArray()
+            if querys.length() <> 0 then
+                set table = sort(table, querys.clone())
+            end if
+            call tables.push(table)
         next
-        set sort = after
+        
+        set sort = reduce(tables)
+    end function
+    
+    private function reduce(byval tables)
+        dim list
+        set list = tables.shift()
+        for each table in tables.toArray()
+            call table.shift() ' drop header
+            for each row in table.toArray()
+                call list.push(row)
+            next
+        next
+        set reduce = list
     end function
     
     private function splitTable(byval ListTable, byval index)
@@ -935,45 +947,24 @@ class SqlTable
         ''' 第二引数 index として、グループ化する基準となる列番号 (Number) を受け取る。
         ''' 戻り値として、テーブルの集合 (ArrayList<ArrayList<ArrayList>>) を返す。
         if index < 0 then call error_("split")
+        
+        dim header
+        set header = ListTable.shift()
+        
         dim tables, table
         set tables = new ArrayList
         do while ListTable.length() > 0
             set table = new ArrayList
-            call table.push(head.clone())
             call table.push(ListTable.shift())
-            value = table.item(1).item(index)
+            value = table.item(0).item(index)
             do while ListTable.length() > 0
                 if ListTable.item(0).item(index) <> value then exit do
                 call table.push(ListTable.shift())
             loop
+            call table.unshift(header.clone())
             call tables.push(table)
         loop
         set splitTable = tables
-    end function
-    
-    private function getNextOption(byval lex)
-        getNextOption = empty
-        dim token, key, mode
-        set token = lex.nextToken()
-        if token.getTyp() = "EOF" then exit function
-        if token.getTyp() <> "WORD" then error_("order1")
-        
-        key = token.getLex()
-        set token = lex.nextToken()
-        select case token.getTyp()
-        case "EOF", "COMMA"
-            mode = "acs"
-        case "WORD"
-            mode = token.getLex()
-            set token = lex.nextToken()
-            select case token.getTyp()
-            case "EOF", "COMMA"
-            case else call error_("order2")
-            end select
-        case else
-            call error_("order3")
-        end select
-        getNextOption = array(key, mode)
     end function
     
     private function mergesort(byval seq, byval key)
@@ -1088,7 +1079,7 @@ class SqlTable
             next
             call table.push(row)
         next
-        set toListTable = list
+        set toListTable = table
     end function
     
     public function toArrayTable(byval withHeader)
@@ -1141,10 +1132,12 @@ class SqlTable
         ''' リストのリストを二次元配列に格納する
         ''' 第一引数 list として、リストのリスト (ArrayList) を受け取る。
         ''' 戻り値として、二次元配列 (Array(,)) を返す。
-        dim row, col, ary(), i, j
+        dim row, col, ary()
         row = list.length() - 1
         col = list.item(0).length() - 1
         redim ary(row, col)
+        
+        dim i, j
         i = 0
         do while i <= row
             j = 0
