@@ -916,7 +916,7 @@ class SqlTable
         
         call table.unshift(header)
         
-        dim tables
+        dim tables, table
         set tables = new ArrayList
         for each table in splitTable(table, index).toArray()
             if querys.length() <> 0 then
