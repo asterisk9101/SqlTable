@@ -1107,7 +1107,7 @@ class SqlTable
         if isEmpty(head) then exit function
         if body.length() = 0 then exit function
         if body.length() = 1 then
-            toArrayTableWithoutHeader = oneRowArrayTable(body.item(1))
+            toArrayTableWithoutHeader = oneRowArrayTable(body.item(0))
             exit function
         end if
         toArrayTableWithoutHeader = convertToArrayTable(body)
